@@ -22,7 +22,11 @@ jobs:
         run: composer validate --strict
       - name: Install
         run: composer install --no-interaction --no-progress
+      - name: Configuration sanity check
+        run: APP_ENV=local php scripts/check-config.php
       - name: Lint
         run: composer lint
       - name: Tests
         run: composer test
+      - name: Build Docker image
+        run: docker build --tag appfoundry:ci .

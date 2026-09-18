@@ -10,7 +10,9 @@ use App\Core\Response;
 use App\Core\View;
 use App\Security\Auth;
 use App\Security\Csrf;
+use App\Security\PasswordPolicy;
 use PDO;
+use PDOException;
 
 final class UserController
 {
@@ -39,13 +41,20 @@ final class UserController
         }
 
         $name = trim((string) ($_POST['name'] ?? ''));
-        $email = trim((string) ($_POST['email'] ?? ''));
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $role = (string) ($_POST['role'] ?? 'user');
         $password = (string) ($_POST['password'] ?? '');
 
-        if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 12 || !in_array($role, ['admin', 'manager', 'user'], true)) {
+        if (
+            $name === ''
+            || strlen($name) > 120
+            || strlen($email) > 190
+            || !filter_var($email, FILTER_VALIDATE_EMAIL)
+            || !PasswordPolicy::accepts($password)
+            || !in_array($role, ['admin', 'manager', 'user'], true)
+        ) {
             http_response_code(422);
-            $this->indexWithError('Use a valid email, a password with at least 12 characters, and a supported role.');
+            $this->indexWithError('Use a valid name and email, a 12-72 character password, and a supported role.');
             return;
         }
 
@@ -56,18 +65,22 @@ final class UserController
         try {
             $statement->execute([
                 'name' => $name,
-                'email' => strtolower($email),
+                'email' => $email,
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 'role' => $role,
                 'created_at' => gmdate('c'),
             ]);
-        } catch (\PDOException) {
+        } catch (PDOException $exception) {
+            if ((string) $exception->getCode() !== '23000') {
+                throw $exception;
+            }
+
             http_response_code(422);
             $this->indexWithError('That email is already registered.');
             return;
         }
 
-        AuditLogger::record((int) Auth::user()['id'], 'user.created', ['email' => strtolower($email), 'role' => $role]);
+        AuditLogger::record((int) Auth::user()['id'], 'user.created', ['email' => $email, 'role' => $role]);
         Response::redirect('/admin/users');
     }
 
