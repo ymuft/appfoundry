@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AuditController;
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
 use App\Controllers\HealthController;
@@ -33,6 +34,7 @@ $auth = new AuthController();
 $dashboard = new DashboardController();
 $health = new HealthController();
 $users = new UserController();
+$audit = new AuditController();
 
 $router = new Router();
 $router->get('/', [$dashboard, 'index']);
@@ -42,4 +44,5 @@ $router->post('/logout', [$auth, 'logout']);
 $router->get('/health', [$health, 'show']);
 $router->get('/admin/users', [$users, 'index']);
 $router->post('/admin/users', [$users, 'create']);
+$router->get('/admin/audit', [$audit, 'index']);
 $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $_SERVER['REQUEST_URI'] ?? '/');
