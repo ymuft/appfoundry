@@ -1,0 +1,7 @@
+/vendor/
+/.env
+/storage/*.sqlite
+/storage/*.sqlite-*
+/.idea/
+/.vscode/
+.DS_Store

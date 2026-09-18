@@ -1,0 +1,6 @@
+.git
+.github
+vendor
+.env
+storage/*.sqlite
+README.md
