@@ -10,7 +10,7 @@
 <div class="shell">
   <header class="topbar">
     <div><div class="brand"><a href="/">AppFoundry</a></div><div class="muted">User administration</div></div>
-    <div><?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?></div>
+    <div><?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?> <?php if ($user['role'] === 'admin'): ?> · <a href="/admin/audit">Audit</a><?php endif; ?></div>
   </header>
 
   <section class="card">
