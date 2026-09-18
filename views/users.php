@@ -19,9 +19,9 @@
     <form method="post" action="/admin/users">
       <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>">
       <div class="row">
-        <div><label>Name</label><input name="name" required></div>
-        <div><label>Email</label><input name="email" type="email" required></div>
-        <div><label>Password</label><input name="password" type="password" minlength="12" required></div>
+        <div><label>Name</label><input name="name" maxlength="120" required></div>
+        <div><label>Email</label><input name="email" type="email" maxlength="190" required></div>
+        <div><label>Password</label><input name="password" type="password" minlength="12" maxlength="72" required autocomplete="new-password"></div>
         <div><label>Role</label><select name="role"><option value="user">user</option><option value="manager">manager</option><option value="admin">admin</option></select></div>
       </div>
       <div class="spacer"></div>

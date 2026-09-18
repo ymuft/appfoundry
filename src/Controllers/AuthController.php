@@ -12,6 +12,10 @@ use App\Security\RateLimiter;
 
 final class AuthController
 {
+    private const ACCOUNT_ATTEMPTS = 5;
+    private const IP_ATTEMPTS = 25;
+    private const WINDOW_SECONDS = 900;
+
     public function showLogin(): void
     {
         if (Auth::check()) {
@@ -23,10 +27,12 @@ final class AuthController
 
     public function login(): void
     {
-        $email = trim((string) ($_POST['email'] ?? ''));
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $password = (string) ($_POST['password'] ?? '');
         $csrf = $_POST['_csrf'] ?? null;
-        $key = 'login:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . ':' . strtolower($email);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $ipKey = 'login:ip:' . $ip;
+        $accountKey = 'login:account:' . hash('sha256', $email);
 
         if (!Csrf::validate(is_string($csrf) ? $csrf : null)) {
             http_response_code(419);
@@ -34,20 +40,24 @@ final class AuthController
             return;
         }
 
-        if (RateLimiter::tooManyAttempts($key, 5, 900)) {
+        if (
+            RateLimiter::tooManyAttempts($accountKey, self::ACCOUNT_ATTEMPTS, self::WINDOW_SECONDS)
+            || RateLimiter::tooManyAttempts($ipKey, self::IP_ATTEMPTS, self::WINDOW_SECONDS)
+        ) {
             http_response_code(429);
             View::render('login', ['csrf' => Csrf::token(), 'error' => 'Too many login attempts. Try again later.']);
             return;
         }
 
-        if (!Auth::attempt($email, $password)) {
-            RateLimiter::hit($key);
+        if ($email === '' || strlen($email) > 190 || strlen($password) > 4096 || !Auth::attempt($email, $password)) {
+            RateLimiter::hit($accountKey);
+            RateLimiter::hit($ipKey);
             http_response_code(422);
             View::render('login', ['csrf' => Csrf::token(), 'error' => 'Invalid credentials.']);
             return;
         }
 
-        RateLimiter::clear($key);
+        RateLimiter::clear($accountKey);
         Response::redirect('/');
     }
 

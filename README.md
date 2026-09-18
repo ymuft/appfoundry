@@ -9,17 +9,17 @@ Use it as a base for inventory tools, internal dashboards, small CRMs, maintenan
 ## What you get
 
 - PHP 8.3 with a small framework-free core
-- session-based authentication with session ID rotation
+- session-based authentication with strict-mode session IDs and ID rotation after login
 - role-based authorization (`admin`, `manager`, `user`)
 - CSRF protection on state-changing requests
-- database-backed login throttling
+- database-backed account + IP login throttling
 - audit logging for authentication and user creation
 - secure response headers and restrictive CSP
 - SQLite by default, MySQL supported through environment configuration
 - admin user management example
 - `/health` JSON endpoint for monitoring
 - Docker image and Docker Compose setup
-- GitHub Actions for Composer validation, linting, and tests
+- GitHub Actions for configuration checks, linting, tests, and Docker builds
 - no JavaScript framework and no runtime package dependencies beyond PHP/PDO
 
 ## Quick start
@@ -30,14 +30,15 @@ docker compose build
 docker compose run --rm app php scripts/migrate.php
 docker compose run --rm app php scripts/create-admin.php \
   --name="Admin" \
-  --email="admin@example.com" \
-  --password="change-this-to-a-long-password"
+  --email="admin@example.com"
 docker compose up -d
 ```
 
+The admin command prompts for the password without putting it in the command line. Passwords must contain 12-72 characters.
+
 Open `http://localhost:8080`.
 
-> Before exposing an instance to the internet, set a strong `APP_KEY`, enable secure cookies behind HTTPS, review your reverse-proxy configuration, and replace the example application screens with your own workflow.
+> Before exposing an instance to the internet, set `APP_ENV=production`, enable `APP_SECURE_COOKIES=true` behind HTTPS, use a non-default database password, review your reverse-proxy configuration, and replace the example application screens with your own workflow.
 
 ## Architecture
 
@@ -69,12 +70,13 @@ AppFoundry starts with safer defaults rather than asking each fork to rediscover
 
 | Area | Default |
 |---|---|
-| Password storage | `password_hash()` / `password_verify()` |
-| Sessions | ID regeneration after login, HttpOnly, SameSite=Lax |
-| CSRF | 256-bit per-session token |
-| Login abuse | 5 failed attempts per identity/IP in 15 minutes |
+| Password storage | `password_hash()` / `password_verify()` with automatic rehash on login |
+| Password input | 12-72 characters to avoid current bcrypt truncation ambiguity |
+| Sessions | strict mode, cookies only, ID regeneration after login, HttpOnly, SameSite=Lax |
+| CSRF | 256-bit per-session token, rotated after login |
+| Login abuse | per-account and per-IP throttling over a 15-minute window |
 | Authorization | explicit role checks |
-| Browser policy | CSP, frame denial, no-sniff, restrictive permissions |
+| Browser policy | restrictive CSP, frame denial, no-sniff, no-store dynamic responses |
 | Audit | sign-in, sign-out, and user creation events |
 | Secrets | environment file excluded from Git |
 
@@ -97,7 +99,7 @@ DB_HOST=db
 DB_PORT=3306
 DB_DATABASE=appfoundry
 DB_USERNAME=appfoundry
-DB_PASSWORD=change-me
+DB_PASSWORD=replace-this
 ```
 
 Use `migrations/001_init.mysql.sql` when running with MySQL.
@@ -107,13 +109,13 @@ Use `migrations/001_init.mysql.sql` when running with MySQL.
 ```text
 public/             web root and static assets
 src/Core/           routing, environment, database and response primitives
-src/Security/       auth, CSRF, rate limiting and browser security headers
+src/Security/       auth, password policy, CSRF, rate limiting and browser security headers
 src/Audit/          audit trail writer
 src/Controllers/    example application controllers
 views/              server-rendered UI
 migrations/         SQLite and MySQL schema
-scripts/            migration and first-admin commands
-tests/              dependency-free smoke tests
+scripts/            migration, configuration and first-admin commands
+tests/              dependency-free integration/smoke tests
 docker/             web server configuration
 .github/workflows/  CI
 ```

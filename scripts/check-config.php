@@ -8,13 +8,23 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 Env::load(dirname(__DIR__) . '/.env');
 
 $problems = [];
-$key = Env::get('APP_KEY', '');
-if ($key === null || strlen($key) < 32 || $key === 'change-me-to-a-long-random-value') {
-    $problems[] = 'APP_KEY must be replaced with a random value of at least 32 characters.';
+$environment = Env::get('APP_ENV', 'local') ?? 'local';
+$allowedEnvironments = ['local', 'development', 'testing', 'production'];
+
+if (!in_array($environment, $allowedEnvironments, true)) {
+    $problems[] = 'APP_ENV must be one of: ' . implode(', ', $allowedEnvironments) . '.';
 }
 
-if (Env::get('APP_ENV', 'production') === 'production' && !Env::bool('APP_SECURE_COOKIES', false)) {
-    $problems[] = 'APP_SECURE_COOKIES should be true in production behind HTTPS.';
+if ($environment === 'production' && !Env::bool('APP_SECURE_COOKIES', false)) {
+    $problems[] = 'APP_SECURE_COOKIES must be true in production behind HTTPS.';
+}
+
+if (
+    $environment === 'production'
+    && Env::get('DB_DRIVER', 'sqlite') === 'mysql'
+    && in_array(Env::get('DB_PASSWORD', ''), ['', 'change-me'], true)
+) {
+    $problems[] = 'DB_PASSWORD must be changed before using MySQL in production.';
 }
 
 if ($problems !== []) {

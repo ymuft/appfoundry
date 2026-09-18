@@ -12,14 +12,24 @@ final class Auth
 {
     public static function attempt(string $email, string $password): bool
     {
+        $email = strtolower(trim($email));
         $statement = Database::connection()->prepare(
-            'SELECT id, email, name, password_hash, role, is_active FROM users WHERE lower(email) = lower(:email) LIMIT 1'
+            'SELECT id, email, name, password_hash, role, is_active FROM users WHERE lower(email) = :email LIMIT 1'
         );
-        $statement->execute(['email' => trim($email)]);
+        $statement->execute(['email' => $email]);
         $user = $statement->fetch(PDO::FETCH_ASSOC);
 
         if (!$user || !(bool) $user['is_active'] || !password_verify($password, $user['password_hash'])) {
             return false;
+        }
+
+        if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
+            Database::connection()
+                ->prepare('UPDATE users SET password_hash = :password_hash WHERE id = :id')
+                ->execute([
+                    'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                    'id' => (int) $user['id'],
+                ]);
         }
 
         session_regenerate_id(true);
@@ -61,7 +71,14 @@ final class Auth
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+            setcookie(session_name(), '', [
+                'expires' => time() - 42000,
+                'path' => $params['path'],
+                'domain' => $params['domain'],
+                'secure' => $params['secure'],
+                'httponly' => $params['httponly'],
+                'samesite' => $params['samesite'] ?? 'Lax',
+            ]);
         }
         session_destroy();
     }

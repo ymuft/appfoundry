@@ -21,12 +21,12 @@ final class Database
 
         if ($driver === 'sqlite') {
             $database = Env::get('DB_DATABASE', dirname(__DIR__, 2) . '/storage/app.sqlite');
-            if ($database === null) {
+            if ($database === null || trim($database) === '') {
                 throw new RuntimeException('DB_DATABASE is required for SQLite.');
             }
             $directory = dirname($database);
-            if (!is_dir($directory)) {
-                mkdir($directory, 0775, true);
+            if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+                throw new RuntimeException('Unable to create SQLite directory: ' . $directory);
             }
             $dsn = 'sqlite:' . $database;
             $username = null;
@@ -50,6 +50,7 @@ final class Database
 
         if ($driver === 'sqlite') {
             self::$connection->exec('PRAGMA foreign_keys = ON');
+            self::$connection->exec('PRAGMA busy_timeout = 5000');
         }
 
         return self::$connection;

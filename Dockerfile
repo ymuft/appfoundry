@@ -9,7 +9,9 @@ RUN apt-get update \
     && docker-php-ext-install pdo_mysql pdo_sqlite \
     && a2enmod headers expires \
     && rm -rf /var/lib/apt/lists/* \
-    && rm -f /etc/apache2/sites-enabled/000-default.conf
+    && rm -f /etc/apache2/sites-enabled/000-default.conf \
+    && mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+    && printf '%s\n' 'expose_php=Off' 'display_errors=Off' 'log_errors=On' > "$PHP_INI_DIR/conf.d/appfoundry.ini"
 WORKDIR /var/www/html
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
