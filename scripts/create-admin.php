@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Core\Database;
 use App\Core\Env;
 use App\Security\PasswordPolicy;
-use PDOException;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 Env::load(dirname(__DIR__) . '/.env');
@@ -58,7 +57,7 @@ try {
         'role' => 'admin',
         'created_at' => gmdate('c'),
     ]);
-} catch (PDOException $exception) {
+} catch (\PDOException $exception) {
     if ((string) $exception->getCode() !== '23000') {
         throw $exception;
     }

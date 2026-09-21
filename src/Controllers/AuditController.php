@@ -27,15 +27,21 @@ final class AuditController
              ORDER BY id DESC
              LIMIT :limit OFFSET :offset'
         );
-        $statement->bindValue('limit', self::PER_PAGE, PDO::PARAM_INT);
+        $statement->bindValue('limit', self::PER_PAGE + 1, PDO::PARAM_INT);
         $statement->bindValue('offset', $offset, PDO::PARAM_INT);
         $statement->execute();
         $events = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        $hasNextPage = count($events) > self::PER_PAGE;
+        if ($hasNextPage) {
+            array_pop($events);
+        }
 
         View::render('audit', [
             'user' => Auth::user(),
             'events' => $events,
             'page' => $page,
+            'hasNextPage' => $hasNextPage,
         ]);
     }
 
