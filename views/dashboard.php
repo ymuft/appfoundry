@@ -12,7 +12,7 @@
     <div><div class="brand">AppFoundry</div><div class="muted">starter workspace</div></div>
     <div>
       <span class="muted"><?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?></span>
-      <?php if ($user['role'] === 'admin'): ?> · <a href="/admin/users">Users</a><?php endif; ?>
+      <?php if ($user['role'] === 'admin'): ?> · <a href="/admin/users">Users</a> · <a href="/admin/audit">Audit</a><?php endif; ?>
       · <form class="inline" method="post" action="/logout"><input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8') ?>"><button class="secondary" type="submit">Sign out</button></form>
     </div>
   </header>
