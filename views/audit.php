@@ -27,12 +27,12 @@
             <p class="muted">Page <?= (int) $page ?></p>
 
             <?php
-            $pagination = static function () use ($page, $events): void { ?>
+            $pagination = static function () use ($page, $hasNextPage): void { ?>
                 <?php if ($page > 1): ?>
-                    <a href="/admin/audit?page=<?= (int) ($page - 1) ?>">← Newer</a>
+                    <a class="pagination-link" href="/admin/audit?page=<?= (int) ($page - 1) ?>">← Newer</a>
                 <?php endif; ?>
-                <?php if ($events !== []): ?>
-                    <a href="/admin/audit?page=<?= (int) ($page + 1) ?>" style="margin-left: 12px;">Older →</a>
+                <?php if ($hasNextPage): ?>
+                    <a class="pagination-link" href="/admin/audit?page=<?= (int) ($page + 1) ?>">Older →</a>
                 <?php endif; ?>
             <?php }; ?>
 
@@ -41,7 +41,7 @@
             <?php elseif ($events === []): ?>
                 <p class="muted">No events on this page.</p>
                 <?php if ($page > 1): ?>
-                    <a href="/admin/audit?page=<?= (int) ($page - 1) ?>">← Newer</a>
+                    <a class="pagination-link" href="/admin/audit?page=<?= (int) ($page - 1) ?>">← Newer</a>
                 <?php endif; ?>
             <?php else: ?>
                 <div>

@@ -7,6 +7,7 @@ use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
 use App\Controllers\HealthController;
 use App\Controllers\UserController;
+use App\Core\ConfigValidator;
 use App\Core\Env;
 use App\Core\Router;
 use App\Security\SecurityHeaders;
@@ -14,6 +15,7 @@ use App\Security\SecurityHeaders;
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 Env::load(dirname(__DIR__) . '/.env');
+ConfigValidator::assertSafe();
 SecurityHeaders::apply();
 
 ini_set('session.use_strict_mode', '1');

@@ -33,7 +33,7 @@ Use a short, descriptive branch name, for example:
 
 ```bash
 git checkout -b fix/session-expiration
-git checkout -b feat/audit-viewer
+git checkout -b feat/user-status-toggle
 ```
 
 Keep a pull request focused on one behavior or issue whenever possible.
@@ -49,6 +49,8 @@ composer lint
 composer test
 docker build -t appfoundry:test .
 ```
+
+`composer lint` uses the PHP CLI directly and is intended to work on Linux, macOS, and Windows without relying on Unix-only `find`/`xargs` commands.
 
 For security-sensitive logic, add or update tests. UI screenshots are useful, but are not a substitute for tests.
 

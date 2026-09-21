@@ -38,7 +38,7 @@ The admin command prompts for the password without putting it in your shell hist
 
 Open **http://localhost:8080**.
 
-Before exposing an instance to the internet, set `APP_ENV=production`, enable `APP_SECURE_COOKIES=true` behind HTTPS, use a non-default database password, and review your reverse-proxy configuration.
+Before exposing an instance to the internet, set `APP_ENV=production`, enable `APP_SECURE_COOKIES=true` behind HTTPS, use a non-default database password, and review your reverse-proxy configuration. AppFoundry validates unsafe production defaults at runtime and will refuse to bootstrap with an invalid production configuration.
 
 ## What is already wired together
 
@@ -49,10 +49,10 @@ Before exposing an instance to the internet, set `APP_ENV=production`, enable `A
 | Request security | CSRF tokens, restrictive CSP, frame denial, no-sniff, no-store responses |
 | Login abuse | Database-backed per-account and per-IP throttling |
 | Passwords | `password_hash()` / `password_verify()` with automatic rehash |
-| Audit | Authentication and user-creation events with metadata |
-| Database | SQLite by default; MySQL supported |
+| Audit | Authentication/user events plus an admin-only paginated audit viewer |
+| Database | SQLite by default; MySQL supported and smoke-tested in CI |
 | Operations | `/health`, Docker image, Docker Compose, production PHP settings |
-| Quality | Composer validation, configuration checks, linting, tests, Docker build in CI |
+| Quality | Composer validation, configuration checks, cross-platform PHP linting, tests, Docker build in CI |
 
 No JavaScript framework is required and there are no runtime package dependencies beyond PHP/PDO.
 
@@ -61,7 +61,7 @@ No JavaScript framework is required and there are no runtime package dependencie
 ```text
 AppFoundry
     │
-    ├── keep: auth / sessions / CSRF / RBAC / audit / Docker / CI
+    ├── keep: auth / sessions / CSRF / roles / audit / Docker / CI
     │
     └── replace: example dashboard + domain tables + domain controllers
                          │
@@ -79,18 +79,20 @@ Browser
   ▼
 public/index.php
   │
+  ├── Configuration validation
   ├── Security headers
   ├── Session bootstrap
   └── Router
        │
-       ├── AuthController ── Auth / CSRF / RateLimiter
-       ├── UserController ── RBAC / AuditLogger
-       ├── HealthController ─ Database probe
+       ├── AuthController ───── Auth / CSRF / RateLimiter
+       ├── UserController ───── role checks / AuditLogger
+       ├── AuditController ──── admin-only audit viewer
+       ├── HealthController ─── database probe
        └── DashboardController
 
-                   PDO
-                    │
-               SQLite / MySQL
+                         PDO
+                          │
+                     SQLite / MySQL
 ```
 
 The foundation is deliberately small enough to read and audit without learning a custom framework first.
@@ -106,8 +108,11 @@ The foundation is deliberately small enough to read and audit without learning a
 | Login abuse | per-account and per-IP throttling over a 15-minute window |
 | Authorization | explicit server-side role checks |
 | Browser policy | restrictive CSP, frame denial, no-sniff, no-store dynamic responses |
-| Audit | sign-in, sign-out, and user-creation events |
+| Audit | sign-in, sign-out, user-creation events and a read-only admin viewer |
 | Secrets | environment file excluded from Git |
+| Production bootstrap | unsafe production cookie/database defaults are rejected before sessions start |
+
+Audit writes are best-effort: a storage failure is sent to the server error log instead of trapping an authenticated user in a failed login/logout flow.
 
 AppFoundry is a starter, not a security certification. Every deployment still needs a threat model appropriate to its users, data, network, and reverse-proxy setup.
 
@@ -120,6 +125,8 @@ DB_DRIVER=sqlite
 DB_DATABASE=/var/www/html/storage/app.sqlite
 ```
 
+Fresh SQLite schemas enforce email uniqueness case-insensitively to match application login behavior.
+
 MySQL is supported through environment configuration:
 
 ```env
@@ -131,19 +138,19 @@ DB_USERNAME=appfoundry
 DB_PASSWORD=replace-this
 ```
 
-Use `migrations/001_init.mysql.sql` when running with MySQL.
+Use `migrations/001_init.mysql.sql` when running with MySQL. CI runs a MySQL migration/admin-creation smoke test in addition to the SQLite test suite.
 
 ## Project layout
 
 ```text
 public/             web root and static assets
-src/Core/           routing, environment, database and response primitives
+src/Core/           routing, environment, configuration, database and response primitives
 src/Security/       auth, password policy, CSRF, rate limiting and browser security headers
 src/Audit/          audit trail writer
 src/Controllers/    example application controllers
 views/              server-rendered UI
 migrations/         SQLite and MySQL schema
-scripts/            migration, configuration and first-admin commands
+scripts/            migration, configuration, lint and first-admin commands
 tests/              dependency-free integration/smoke tests
 docker/             web server configuration
 docs/assets/        repository artwork
@@ -157,10 +164,9 @@ Contributions are welcome. Small, focused pull requests are easier to review and
 Good places to start:
 
 - [Disable / re-enable user accounts — #6](https://github.com/ymuft/appfoundry/issues/6)
-- [Read-only audit log viewer — #7](https://github.com/ymuft/appfoundry/issues/7)
 - [End-to-end HTTP smoke tests — #11](https://github.com/ymuft/appfoundry/issues/11)
 
-More substantial work is tracked under [`help wanted`](https://github.com/ymuft/appfoundry/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22), including session expiration, versioned migrations, and trusted-proxy support.
+More substantial work is tracked under [`help wanted`](https://github.com/ymuft/appfoundry/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22), including PostgreSQL, MFA, session expiration, versioned migrations, and trusted-proxy support.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Security issues should not be filed publicly; see [SECURITY.md](SECURITY.md).
 

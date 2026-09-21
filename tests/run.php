@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+use App\Core\ConfigValidator;
 use App\Core\Database;
 use App\Core\Env;
 use App\Core\Router;
@@ -27,6 +28,18 @@ putenv('APPFOUNDRY_TEST_BOOL=true');
 $assert(Env::bool('APPFOUNDRY_TEST_BOOL') === true, 'Env boolean parsing');
 $assert(PasswordPolicy::accepts(str_repeat('a', 12)), 'Password policy accepts minimum length');
 $assert(!PasswordPolicy::accepts(str_repeat('a', 73)), 'Password policy rejects bcrypt-truncating length');
+
+putenv('APP_ENV=production');
+putenv('DB_DRIVER=sqlite');
+putenv('APP_SECURE_COOKIES=false');
+$assert(
+    in_array('APP_SECURE_COOKIES must be true in production behind HTTPS.', ConfigValidator::problems(), true),
+    'Production configuration rejects insecure session cookies'
+);
+putenv('APP_SECURE_COOKIES=true');
+$assert(ConfigValidator::problems() === [], 'Valid production SQLite configuration passes validation');
+putenv('APP_ENV=testing');
+putenv('APP_SECURE_COOKIES=false');
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -83,7 +96,6 @@ for ($i = 0; $i < 60; $i++) {
 }
 
 $statement = $pdo->prepare('SELECT id FROM audit_logs ORDER BY id DESC LIMIT :limit OFFSET :offset');
-
 $statement->bindValue('limit', 50, PDO::PARAM_INT);
 $statement->bindValue('offset', 0, PDO::PARAM_INT);
 $statement->execute();
@@ -101,7 +113,7 @@ $malicious = json_encode([
     'name'  => '<script>alert(1)</script>',
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-$rendered = (static function () use ($malicious): string {
+$renderAudit = static function (string $metadata, bool $hasNextPage): string {
     ob_start();
     App\Core\View::render('audit', [
         'user' => [
@@ -115,14 +127,16 @@ $rendered = (static function () use ($malicious): string {
             'user_id'    => null,
             'action'     => 'test.xss',
             'ip_address' => '127.0.0.1',
-            'metadata'   => $malicious,
+            'metadata'   => $metadata,
             'created_at' => gmdate('c'),
         ]],
         'page' => 1,
+        'hasNextPage' => $hasNextPage,
     ]);
     return (string) ob_get_clean();
-})();
+};
 
+$rendered = $renderAudit((string) $malicious, false);
 $assert(
     !str_contains($rendered, '<script>alert(1)</script>'),
     'Audit view does not emit raw <script> from metadata'
@@ -131,6 +145,8 @@ $assert(
     str_contains($rendered, '&lt;script&gt;alert(1)&lt;/script&gt;'),
     'Audit view HTML-escapes metadata'
 );
+$assert(!str_contains($rendered, 'Older →'), 'Audit view hides next-page link when no older page exists');
+$assert(str_contains($renderAudit((string) $malicious, true), 'Older →'), 'Audit view shows next-page link when older events exist');
 
 $key = 'test:' . bin2hex(random_bytes(4));
 $assert(!RateLimiter::tooManyAttempts($key, 2, 60), 'Rate limiter starts below limit');
@@ -150,6 +166,22 @@ Database::connection()->prepare(
     'role' => 'admin',
     'created_at' => gmdate('c'),
 ]);
+
+$duplicateRejected = false;
+try {
+    Database::connection()->prepare(
+        'INSERT INTO users (name, email, password_hash, role, is_active, created_at) VALUES (:name, :email, :password_hash, :role, 1, :created_at)'
+    )->execute([
+        'name' => 'Duplicate Admin',
+        'email' => 'ADMIN@example.com',
+        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        'role' => 'admin',
+        'created_at' => gmdate('c'),
+    ]);
+} catch (\PDOException) {
+    $duplicateRejected = true;
+}
+$assert($duplicateRejected, 'SQLite enforces case-insensitive unique email addresses');
 
 $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 $_SERVER['HTTP_USER_AGENT'] = 'AppFoundry test runner';
