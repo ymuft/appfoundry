@@ -14,7 +14,7 @@ final class View
             throw new RuntimeException('Invalid view name.');
         }
 
-        $views = realpath(dirname(__DIR__, 2) . '/views');
+        $views = realpath(Paths::resolve('views'));
         if ($views === false) {
             throw new RuntimeException('Views directory not found.');
         }

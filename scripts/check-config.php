@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Core\Bootstrap;
 use App\Core\ConfigValidator;
-use App\Core\Env;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
-Env::load(dirname(__DIR__) . '/.env');
+Bootstrap::console(dirname(__DIR__));
 
 $problems = ConfigValidator::problems();
 if ($problems !== []) {

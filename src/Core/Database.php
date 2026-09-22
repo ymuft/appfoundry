@@ -20,10 +20,11 @@ final class Database
         $driver = Env::get('DB_DRIVER', 'sqlite');
 
         if ($driver === 'sqlite') {
-            $database = Env::get('DB_DATABASE', dirname(__DIR__, 2) . '/storage/app.sqlite');
+            $database = Env::get('DB_DATABASE', 'storage/app.sqlite');
             if ($database === null || trim($database) === '') {
                 throw new RuntimeException('DB_DATABASE is required for SQLite.');
             }
+            $database = Paths::resolve($database);
             $directory = dirname($database);
             if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
                 throw new RuntimeException('Unable to create SQLite directory: ' . $directory);

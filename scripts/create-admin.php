@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Core\Bootstrap;
 use App\Core\Database;
-use App\Core\Env;
 use App\Security\PasswordPolicy;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
-Env::load(dirname(__DIR__) . '/.env');
+Bootstrap::console(dirname(__DIR__));
 
 function promptPassword(): string
 {

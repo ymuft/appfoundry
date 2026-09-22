@@ -10,6 +10,7 @@ final class Env
 
     public static function load(string $path): void
     {
+        $path = Paths::resolve($path);
         if (!is_file($path)) {
             return;
         }

@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "test": "php tests/run.php",
+    "test": "php tests/run.php && php tests/paths.php",
     "lint": "php scripts/lint.php"
   }
 }
